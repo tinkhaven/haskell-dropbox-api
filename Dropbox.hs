@@ -72,13 +72,3 @@ getAccountInfo session = do
     accountInfoBody <- responseBody <$> (withManager $ httpLbs signedReq)
     let accountInfo = eitherDecode accountInfoBody :: Either String AccountInfo
     return (accountInfo, session)
-
-test = do
-    let sID = getSessionId
---    res <- getAccountInfo sID
-    (url, session) <- getRedirectAuthUrl sID Nothing
-    putStrLn url
-    putStrLn "Continue?"
-    inputStr <- getLine
-    info <- getAccountInfo session
-    putStrLn $ show info
