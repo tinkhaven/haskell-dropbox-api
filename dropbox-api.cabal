@@ -10,7 +10,7 @@ name:                dropbox-api
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.0.0.1
+version:             0.0.0.2
 
 -- A short (one-line) description of the package.
 synopsis:            Haskell Dropbox API
@@ -53,6 +53,7 @@ library
   -- Modules exported by the library.
   exposed-modules:     Dropbox
                        Dropbox.Types
+                       AuthInternal
   
   -- Modules included in this library but not exported.
   -- other-modules:       
