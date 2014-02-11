@@ -2,9 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Dropbox ( getAccountInfo
-               , getSessionId
-               , getRedirectAuthUrl
+               , getSession
                , AccountInfo(..)
+               , DropboxSession(..)
                ) where
 
 import Network.HTTP.Conduit (parseUrl, responseBody, withManager, httpLbs)
@@ -31,8 +31,8 @@ import Control.Monad          (liftM)
 import Control.Monad.Trans.Resource (runResourceT)
 
 import Dropbox.Types (SessionId, AccountInfo(..))
-import Dropbox.Types (DropboxSession)
-import AuthInternal (initSession, getRedirect, getSignedReq)
+import Dropbox.Types (DropboxSession(..))
+import AuthInternal (initSession, getRedirectAuthUrl, getSignedReq)
 
 baseUrl :: String
 baseUrl = "https://api.dropbox.com/1"
@@ -43,25 +43,28 @@ accountInfoUrl = baseUrl ++ "/account/info"
 {-
     Create a new session identifier and register the identifier in the database
  -}
-getSessionId :: SessionId
-getSessionId = 
+generateSessionId :: SessionId
+generateSessionId = 
     let url = map (fromIntegral . C.ord) "api.dropbox.com" :: [W.Word8]
         uuid = UUIDv5.generateNamed UUIDv5.namespaceURL url
     in  UUID.toString $ uuid
 
 {-
-    Get the URL where the user can authenticate herself
+    Get the session which contains the
+    * the authorization URL
+    * the session identifier
  -}
-getRedirectAuthUrl :: SessionId -> Maybe String -> IO (String, DropboxSession)
-getRedirectAuthUrl sessionId callbackUrl = 
+getSession :: Maybe String -> IO DropboxSession
+getSession callbackUrl = 
     do
+        let sessionId = generateSessionId
         session <- initSession sessionId callbackUrl
-        let redirectUrl = getRedirect session
-        return $ (redirectUrl, session)
+        return session
 --        sessionId <- initSession sessionId (Just callbackUrl)
 --        return $ getRedirect sessionId
 
 --getAccountInfo :: SessionId -> IO (Either String AccountInfo)
+-- TODO: rewrite by persisting the session and only returning the session id
 getAccountInfo :: DropboxSession -> IO (Either String AccountInfo, DropboxSession)
 getAccountInfo session = do
     requestUrl              <- parseUrl accountInfoUrl

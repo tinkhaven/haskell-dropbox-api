@@ -1,12 +1,12 @@
 module Main where
 
-import Dropbox ( getSessionId
-               , getRedirectAuthUrl
+import Dropbox ( DropboxSession(..)
+               , getSession
                , getAccountInfo)
 main = do
-    let sID = getSessionId
+    session <- getSession Nothing
 --    res <- getAccountInfo sID
-    (url, session) <- getRedirectAuthUrl sID Nothing
+    let url = getAuthorizationUrl session
     putStrLn url
     putStrLn "Continue?"
     inputStr <- getLine

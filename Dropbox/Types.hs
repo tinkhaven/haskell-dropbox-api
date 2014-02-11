@@ -14,11 +14,11 @@ import Data.Attoparsec.Number (Number(..))
 
 type SessionId = String
 
-data DropboxSession = DropboxSession { getSessionId       :: SessionId
-                                     , getTemporaryToken  :: Credential
-                                     , accessToken        :: Maybe Credential
-                                     , getOAuth           :: OAuth
-                                     , getRedirectUrl     :: String
+data DropboxSession = DropboxSession { getSessionId         :: SessionId
+                                     , getTemporaryToken    :: Credential
+                                     , accessToken          :: Maybe Credential
+                                     , getOAuth             :: OAuth
+                                     , getAuthorizationUrl  :: String
                                      } deriving Show
 
 {-

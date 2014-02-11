@@ -1,9 +1,10 @@
 {- Directive to allow Text and String to be mixed -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module AuthInternal (initSession
-                    , getRedirect
+module AuthInternal ( initSession
+                    , getRedirectAuthUrl
                     , getSignedReq
+                    , mkConsumer
                     ) where
 
 import Data.Conduit (MonadUnsafeIO, MonadResource, MonadBaseControl)
@@ -78,7 +79,7 @@ initSession sessionId callbackUrl = do
         let authRedirectUrl    = OAuth.authorizeUrl oauth tmpCred
             session            = DropboxSession { getSessionId         = sessionId
                                                 , getTemporaryToken    = tmpCred 
-                                                , getRedirectUrl       = authRedirectUrl
+                                                , getAuthorizationUrl  = authRedirectUrl
                                                 , getOAuth             = oauth
                                                 , accessToken          = Nothing
                                                 }
@@ -93,8 +94,8 @@ getRedirect sessionId =
     in  getRedirectUrl session
 -}
 
-getRedirect :: DropboxSession -> String
-getRedirect = getRedirectUrl
+getRedirectAuthUrl :: DropboxSession -> String
+getRedirectAuthUrl = getAuthorizationUrl
 
 --getSignedReq :: SessionId -> Request -> IO Request
 --getSignedReq sessionId req = do 
