@@ -4,6 +4,8 @@
 module Dropbox.Types ( DropboxSession (..)
                      , AccountInfo
                      , Quota
+                     , Metadata
+                     , Content
                      , SessionId
                      ) where 
     
@@ -12,6 +14,11 @@ import Data.Aeson             ((.:), (.:?), decode, eitherDecode, FromJSON(..), 
 import Control.Applicative    ((<$>), (<*>))
 import Data.Attoparsec.Number (Number(..))
 
+import Dropbox.Types.AccountInfo
+import Dropbox.Types.Quota
+import Dropbox.Types.Content
+import Dropbox.Types.Metadata
+
 type SessionId = String
 
 data DropboxSession = DropboxSession { getSessionId         :: SessionId
@@ -19,48 +26,4 @@ data DropboxSession = DropboxSession { getSessionId         :: SessionId
                                      , accessToken          :: Maybe Credential
                                      , getOAuth             :: OAuth
                                      , getAuthorizationUrl  :: String
-                                     } deriving Show
-
-{-
-=== ACCOUNTINFO JSON ===
-{
-    "referral_link": "https://www.dropbox.com/referrals/r1a2n3d4m5s6t7",
-    "display_name": "John P. User",
-    "uid": 12345678,
-    "country": "US",
-    "quota_info": {
-        "shared": 253738410565,
-        "quota": 107374182400000,
-        "normal": 680031877871
-    }
-}
-=== ACCOUNTINFO JSON ===
- -}
-data AccountInfo = AccountInfo { getReferralLink    :: String
-                               , getDisplayName     :: String
-                               , getUid             :: Number
-                               , getCountry         :: String
-                               , getQuotaInfo       :: Quota                        
-                               } deriving (Show)
-
-data Quota      = Quota        { getQuotaTotal      :: Number
-                               , getQuotaNormal     :: Number
-                               , getQuotaShared     :: Number
-                               } deriving (Show)
-                               
-instance FromJSON AccountInfo where
-    parseJSON (Object v) = 
-        AccountInfo <$> 
-        (v .: "referral_link")      <*>
-        (v .: "display_name")       <*>
-        (v .: "uid")                <*>
-        (v .: "country")            <*>
-        (v .: "quota_info")
-
-instance FromJSON Quota where
-    parseJSON (Object v) = 
-        Quota <$>
-        (v .: "quota")              <*>
-        (v .: "normal")             <*>
-        (v .: "shared")             
-
+                                     } deriving (Show, Read)

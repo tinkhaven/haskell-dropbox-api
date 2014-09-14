@@ -1,5 +1,7 @@
 {- Directive to allow Text and String to be mixed -}
 {-# LANGUAGE OverloadedStrings #-}
+{- Functional dependencies, relax strict type checking rules -}
+{-# LANGUAGE FlexibleContexts  #-}
 
 module AuthInternal ( initSession
                     , getRedirectAuthUrl
@@ -7,7 +9,10 @@ module AuthInternal ( initSession
                     , mkConsumer
                     ) where
 
-import Data.Conduit (MonadUnsafeIO, MonadResource, MonadBaseControl)
+--import Data.Conduit --(MonadUnsafeIO, MonadResource, MonadBaseControl)
+import Control.Monad.Trans.Control (MonadBaseControl)
+import Control.Monad.Primitive (PrimMonad, unsafePrimToPrim)
+import Control.Monad.Base (MonadBase, liftBase)
 import Network.HTTP.Conduit
 import Data.Typeable
 import Text.Printf (printf)
@@ -21,6 +26,8 @@ import Data.Aeson             ((.:), (.:?), decode, eitherDecode, FromJSON(..), 
 import Control.Applicative    ((<$>), (<*>))
 import Control.Monad          (liftM)
 import Control.Monad.Trans.Resource (runResourceT)
+import Control.Monad.IO.Class (MonadIO)
+--import Control.Monad.Trans.Resource.Internal (MonadThrow)
 import Data.Attoparsec.Number (Number(..))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as BS
@@ -68,11 +75,12 @@ mkConsumer key secret callbackURI = OAuth.newOAuth
 createOAuth :: Maybe String -> OAuth.OAuth
 createOAuth = mkConsumer (C.pack consumerKey) (C.pack consumerSecret)
 
-getSession :: SessionId -> IO DropboxSession
+getSession :: (MonadBase base m, PrimMonad base, MonadIO m, MonadBaseControl IO m) 
+		=> String -> m DropboxSession
 getSession sessionId = initSession sessionId Nothing
 
---initSession :: SessionId -> Maybe String -> IO SessionId
-initSession :: SessionId -> Maybe String -> IO DropboxSession
+initSession  :: (MonadBase base m, PrimMonad base, MonadIO m, MonadBaseControl IO m) 
+		=> String -> Maybe String -> m DropboxSession
 initSession sessionId callbackUrl = do 
         let oauth = createOAuth callbackUrl
         tmpCred        <- withManager $ OAuth.getTemporaryCredential oauth
@@ -83,43 +91,31 @@ initSession sessionId callbackUrl = do
                                                 , getOAuth             = oauth
                                                 , accessToken          = Nothing
                                                 }
-        --TODO Persist Session
-        --return sessionId
         return session
-
-{-
-getRedirect :: SessionId -> String
-getRedirect sessionId = 
-    let session = getSession sessionId
-    in  getRedirectUrl session
--}
 
 getRedirectAuthUrl :: DropboxSession -> String
 getRedirectAuthUrl = getAuthorizationUrl
 
---getSignedReq :: SessionId -> Request -> IO Request
---getSignedReq sessionId req = do 
-getSignedReq :: DropboxSession -> Request -> IO (Request, DropboxSession)
-getSignedReq session req = do 
-        putStrLn $ "[getSignedReq] with session id " ++ show (getSessionId session) ++ " and req " ++ show req
---        session         <- getSession sessionId
-        token           <- getAccessToken session
-        putStrLn $ "[getSignedReq] accessToken: " ++ show token
-        signedReq       <- OAuth.signOAuth (getOAuth session) token req 
-        return (signedReq, session)
-
---getAccessToken :: (MonadResource m, MonadBaseControl IO m) => DropboxSession -> m OAuth.Credential
+getAccessToken :: (MonadBase base m, PrimMonad base, MonadIO m, MonadBaseControl IO m)
+		=> DropboxSession -> m OAuth.Credential
 getAccessToken session = do
---        putStrLn $ "[getAccessToken] " ++ show (fromJust (accessToken session))
         case accessToken session of
             Just token  ->
                 return token
             Nothing     -> do
                 token <- withManager $ OAuth.getAccessToken (getOAuth session) (getTemporaryToken session)
                 let session = session { accessToken = Just token }
-                putStrLn $ "[getAccessToken] Token: " ++ show token
---                putStrLn $ "[getAccessToken] Session: " ++ show session
                 return token
-                --TODO: Persist in DB
 
-                
+getSignedReq :: (MonadBase base m, PrimMonad base, MonadIO m, MonadBaseControl IO m) 
+		=> DropboxSession -> Request -> m (Request, DropboxSession)
+getSignedReq session req = do 
+        token           <- getAccessToken session
+        let newsession  = DropboxSession    { getSessionId         = getSessionId session
+                                            , getTemporaryToken    = getTemporaryToken session
+                                            , getAuthorizationUrl  = getAuthorizationUrl session
+                                            , getOAuth             = getOAuth session
+                                            , accessToken          = Just token
+                                            }
+        signedReq       <- OAuth.signOAuth (getOAuth newsession) token req 
+        return (signedReq, newsession)

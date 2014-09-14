@@ -2,7 +2,8 @@ module Main where
 
 import Dropbox ( DropboxSession(..)
                , getSession
-               , getAccountInfo)
+               , accountInfo
+               , metadata)
 main = do
     session <- getSession Nothing
 --    res <- getAccountInfo sID
@@ -10,5 +11,5 @@ main = do
     putStrLn url
     putStrLn "Continue?"
     inputStr <- getLine
-    info <- getAccountInfo session
+    info <- accountInfo session
     putStrLn $ show info
